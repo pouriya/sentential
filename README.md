@@ -6,13 +6,13 @@ To understand a word's meaning you need more than a definition. Seeing the word 
 ```sh
 ~ $ git clone --depth https://git/address/of/sentential.git && cd sentential
 # ...
-~/sentenial $ [sudo] make install
+~/sentential $ [sudo] make install
 ```
 Note that you should have python3, pyton3's requests library, python3's lxml library installed.
 
 # Usage
 ```sh
-~ $ sentencial -h
+~ $ sentential -h
 Usage: sentential [OPTION] WORD
 Fetchs some sentence examples which include WORD in them.
 
