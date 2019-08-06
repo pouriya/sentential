@@ -3,17 +3,19 @@
 import lxml.html
 import requests
 from collections import namedtuple
+from time import sleep
 
 
 Colors = namedtuple(
     'Colors',
-    ['red', 'green', 'white', 'yellow', 'none']
+    ['red', 'green', 'white', 'yellow', 'gray', 'none']
 )
 C = Colors(
     red='\033[1;31m',
     green='\033[1;32m',
     white='\033[1;37m',
     yellow='\033[1;33m',
+    gray='\033[0;37m',
     none='\033[0m'
 )
 
@@ -70,6 +72,8 @@ class HTMLSearch:
 
 
     def _search(self, element, tag, attribute, value):
+        if element == None:
+            return None
         for sub_element in element.getchildren():
             if sub_element.tag == tag:
                 if attribute == None:
@@ -161,10 +165,8 @@ class Request:
             )
         if sentences == []:
             raise RuntimeError(
-                '#could not found any sentence from {!r} for {}'.format(
-                    self.url,
-                    word
-                )
+                '#could not found any sentence from {!r} for {!r}'.\
+                format(self.url, word)
             )
         return sentences
 
@@ -196,12 +198,16 @@ class SentencedictCom(Request):
 
 
     def fetch(self, word):
-        request = requests.get(
-            self.url + word + '.html',
-            headers=self.headers
-        )
-        body = request.text
-        return body
+        try:
+            request = requests.get(
+                self.url + word + '.html',
+                headers=self.headers,
+                timeout=10
+            )
+            body = request.text
+            return body
+        except requests.exceptions.Timeout:
+            raise RuntimeError("timeout")
 
 
 class SentenceYourdictionaryCom(Request):
@@ -213,30 +219,56 @@ class SentenceYourdictionaryCom(Request):
 
 
     def parse(self, body):
-        sentences = HTMLSearch(
-            body,
-            'ul',
-            'id',
-            'examples-ul-content'
-        ).value
+        try:
+            sentences = HTMLSearch(
+                body,
+                'ul',
+                'id',
+                'examples-ul-content'
+            ).value
+            mode = 1
+        except:
+            sentences = HTMLSearch(
+                body,
+                'ul',
+                'class',
+                'sentence-list'
+            ).value
+            mode = 2
         result = []
         for sentence in sentences.getchildren():
-            sentence = HTMLSearch(
-                sentence,
-                'div',
-                'class',
-                'li_content'
-            ).value
-            sentence = sentence.text_content()
+            if mode == 1:
+                sentence = HTMLSearch(
+                    sentence,
+                    'div',
+                    'class',
+                    'li_content'
+                ).value
+                sentence = sentence.text_content()
+            else:
+                sentence = HTMLSearch(
+                    sentence,
+                    'p',
+                    None,
+                    None
+                ).value
+                sentence = sentence.text_content()
             if sentence != None:
                 result.append(sentence)
         return result
 
 
     def fetch(self, word):
-        request = requests.get(self.url + word, headers=self.headers)
-        body = request.text
-        return body
+        try:
+            request = requests.get(
+                self.url + word,
+                headers=self.headers,
+                timeout=10
+            )
+            body = request.text
+            return body
+        except requests.exceptions.Timeout:
+            raise RuntimeError("timeout")
 
 
 class TangorinCom(Request):
@@ -264,15 +296,18 @@ class TangorinCom(Request):
 
 
     def fetch(self, word):
-        request = requests.get(
-            self.url + '?search=' + word,
-            headers=self.headers
-        )
-        body = request.text
-        return body
+        try:
+            request = requests.get(
+                self.url + '?search=' + word,
+                headers=self.headers,
+                timeout=10
+            )
+            body = request.text
+            return body
+        except requests.exceptions.Timeout:
+            raise RuntimeError("timeout")
 
-interfaces = [TangorinCom, SentenceYourdictionaryCom, SentencedictCom]
-
+interfaces = [TangorinCom, SentencedictCom, SentenceYourdictionaryCom]
 
 class UI:
 
@@ -286,9 +321,19 @@ class UI:
         for interface in self.interfaces:
             try:
                 interface_object = interface()
-                print('\n' + C.green + interface_object.url + C.none)
+                print('\n' + C.green, end='')
+                for char in interface_object.url:
+                    print(char, end='', flush=True)
+                    sleep(0.01)
+                print(C.none + ' ', end = '')
                 sentences = interface_object.sentences(self.word)
+                print(
+                    C.gray + 
+                    '[found {} sentence(s)]'.format(len(sentences)) +
+                    C.none
+                )
             except Exception as error:
+                print()
                 exceptions.append(error)
                 if len(exceptions) == len(self.interfaces):
                     raise
@@ -301,7 +346,10 @@ class UI:
             normal_color = True
             number = 1
             for sentence in sentences:
-                words = sentence.split(' ')
+                words = sentence.     \
+                    replace('\n', '').\
+                    replace('\r', '').\
+                    split(' ')
                 number_str = str(number)
                 if number < 10:
                     number_str = '0' + number_str
@@ -326,6 +374,9 @@ class UI:
                     elif word.lower().startswith(self.word):
                         print(C.none + C.yellow, end='')
                         normal_color = False
+                    elif word.lower().find(self.word) != -1:
+                        print(C.none + C.yellow, end='')
+                        normal_color = False
                     elif len(word) > 1 and not word[-1].isalpha():
                         if word[:-1].lower() == self.word:
                             print(C.none + C.yellow, end='')
@@ -338,7 +389,7 @@ class UI:
                         normal_color = True
                     if chars + len(word) + 1 > 80:
                         print('\n    ', end='')
-                        chars = len(words) + 1
+                        chars = len(word) + 1
                     else:
                         chars += len(word) + 1
                     print(word + ' ', end='')
@@ -371,7 +422,14 @@ OPTION:
             )
 
     if '--no-color' in argv:
-        C = Colors(red='', green='', white='', yellow='', none='')
+        C = Colors(
+            red='',
+            green='',
+            white='',
+            yellow='',
+            gray='',
+            none=''
+        )
     status_code = 0
     try:
         main()
