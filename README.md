@@ -20,3 +20,4 @@ OPTION:
   --no-color    Does not show colorized text.
   -h, --help    Shows this help text
 ```
+![sentential](https://user-images.githubusercontent.com/20663776/62536930-7e7ef280-b864-11e9-8fa2-a45f86c97ef1.png)
