@@ -298,7 +298,7 @@ class TangorinCom(Request):
         except requests.exceptions.Timeout:
             raise RuntimeError("timeout")
 
-interfaces = [TangorinCom, SentencedictCom, SentenceYourdictionaryCom]
+interfaces = [SentencedictCom, SentenceYourdictionaryCom, TangorinCom]
 
 class UI:
 
