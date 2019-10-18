@@ -129,16 +129,7 @@ class Request:
         return ''
 
 
-    def _check_word(self, word):
-        if word.isalpha():
-            return
-        raise RuntimeError(
-            '#A word MUST contain anly alphabet characters'
-        )
-
-
     def sentences(self, word):
-        self._check_word(word)
         try:
             body = self.fetch(word)
         except Exception as error:
@@ -414,7 +405,13 @@ OPTION:
             print(help_text)
             return
         if len(argv) > 1:
-            UI(interfaces, argv[-1]).main()
+            word = argv[-1].lower()
+            for char in word:
+                if not (96 < ord(char) < 123):
+                    raise RuntimeError(
+                        '#A word MUST contain anly alphabet characters'
+                    )
+            UI(interfaces, word).main()
         else:
             raise RuntimeError(
                 '#\'sentencial\' accepts one English word as last para'\
